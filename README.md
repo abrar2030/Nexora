@@ -4,8 +4,6 @@
 [![Python 3.10](https://img.shields.io/badge/Python-3.10-blue)](https://www.python.org/)
 [![Model Registry](https://img.shields.io/badge/MLflow-Registry-orange)](https://mlflow.org/)
 
-![Clinical AI Architecture](docs/images/clinical_architecture.png)
-
 An end-to-end MLOps system predicting 30-day hospital readmission risk with clinical-grade validation and regulatory compliance.
 
 ## 🏥 Key Features
