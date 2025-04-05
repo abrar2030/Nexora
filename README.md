@@ -1,6 +1,5 @@
 # Hospital Readmission Risk Prediction System
 
-[![CI/CD Pipeline](https://github.com/health-ai/readmission-risk/actions/workflows/ci_cd.yml/badge.svg)](https://github.com/health-ai/readmission-risk/actions)
 [![HIPAA Compliance](https://img.shields.io/badge/HIPAA-Compliant-brightgreen)](https://www.hhs.gov/hipaa)
 [![Python 3.10](https://img.shields.io/badge/Python-3.10-blue)](https://www.python.org/)
 [![Model Registry](https://img.shields.io/badge/MLflow-Registry-orange)](https://mlflow.org/)
@@ -172,4 +171,3 @@ make clinical-validation \
 ## 📄 License
 
 This project is licensed under the Healthcare ML License (HML-1.0) - see [LICENSE](LICENSE) for details.
-```
