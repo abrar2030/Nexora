@@ -38,8 +38,8 @@ An end-to-end MLOps system predicting 30-day hospital readmission risk with clin
 
 ```bash
 # Clone repository
-git clone https://github.com/health-ai/readmission-risk.git
-cd readmission-risk
+git clone https://github.com/abrar2030/Nexora.git
+cd Nexora
 
 # Initialize environment
 make setup && dvc pull
