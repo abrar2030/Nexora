@@ -1,0 +1,20 @@
+deidentification:
+  rules:
+    - name: patient_name
+      pattern: \b[A-Z][a-z]+ [A-Z][a-z]+\b
+      replacement: [REDACTED]
+      context: free_text
+
+    - name: ssn
+      pattern: \d{3}-\d{2}-\d{4}
+      replacement: XXX-XX-XXXX
+
+    - name: date_shift
+      type: temporal
+      shift_days: 365
+      fields:
+        - birthDate
+        - effectiveDateTime
+
+  validation:
+    phi_detection_threshold: 0.01  # Max allowed PHI leakage
