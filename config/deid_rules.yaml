@@ -1,20 +1,47 @@
-deidentification:
-  rules:
-    - name: patient_name
-      pattern: \b[A-Z][a-z]+ [A-Z][a-z]+\b
-      replacement: [REDACTED]
-      context: free_text
+# De-identification Rules
 
-    - name: ssn
-      pattern: \d{3}-\d{2}-\d{4}
-      replacement: XXX-XX-XXXX
+# PHI Elements to Remove
+phi_elements:
+  - patient_name
+  - medical_record_number
+  - address
+  - phone_number
+  - email
+  - social_security_number
+  - account_number
+  - health_plan_beneficiary_number
+  - device_identifiers
+  - biometric_identifiers
+  - full_face_photos
+  - any_other_unique_identifying_number
 
-    - name: date_shift
-      type: temporal
-      shift_days: 365
-      fields:
-        - birthDate
-        - effectiveDateTime
+# Date Shifting
+date_shifting:
+  enabled: true
+  shift_range_days: [-365, 365]
+  consistent_per_patient: true
+  preserve_day_of_week: true
 
-  validation:
-    phi_detection_threshold: 0.01  # Max allowed PHI leakage
+# Age Handling
+age_handling:
+  truncate_ages_over_89: true
+  bin_size_for_elderly: 5
+
+# Geographic Data
+geographic_data:
+  minimum_granularity: state
+  zip_code_handling: first_3_digits
+
+# Quasi-identifiers
+quasi_identifiers:
+  - race
+  - ethnicity
+  - gender
+  - rare_disease_codes
+  - occupation
+
+# Audit Logging
+audit:
+  log_all_access: true
+  log_all_transformations: true
+  retention_period_days: 365

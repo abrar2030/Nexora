@@ -1,0 +1,56 @@
+model_type: deepfm
+embedding_size: 64
+hidden_units: [256, 128, 64]
+dropout_rate: 0.2
+l2_regularization: 0.001
+learning_rate: 0.001
+batch_size: 32
+epochs: 100
+early_stopping_patience: 10
+feature_columns:
+  numeric:
+    - age
+    - previous_admissions
+    - length_of_stay
+    - num_medications
+    - num_diagnoses
+    - num_procedures
+    - days_since_last_admission
+  categorical:
+    - gender:
+        vocabulary_size: 3
+        embedding_dim: 8
+    - insurance_type:
+        vocabulary_size: 5
+        embedding_dim: 16
+    - admission_type:
+        vocabulary_size: 4
+        embedding_dim: 16
+    - discharge_disposition:
+        vocabulary_size: 10
+        embedding_dim: 32
+  multi_categorical:
+    - diagnoses:
+        vocabulary_size: 1000
+        embedding_dim: 64
+        max_length: 20
+    - procedures:
+        vocabulary_size: 500
+        embedding_dim: 48
+        max_length: 15
+    - medications:
+        vocabulary_size: 800
+        embedding_dim: 64
+        max_length: 25
+  temporal:
+    - lab_results:
+        features: 
+          - glucose
+          - hemoglobin
+          - creatinine
+          - sodium
+          - potassium
+        sequence_length: 10
+        embedding_dim: 32
+prediction_task: readmission
+prediction_window: 30  # days

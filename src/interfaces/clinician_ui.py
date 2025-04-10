@@ -1,5 +1,7 @@
 import streamlit as st
 import plotly.express as px
+import pandas as pd
+import altair as alt
 
 def show_clinician_dashboard(patient_data, predictions):
     st.set_page_config(layout="wide")
@@ -32,7 +34,7 @@ def show_clinician_dashboard(patient_data, predictions):
     st.altair_chart(alt.Chart(shap_df.head(10)).mark_bar().encode(
         x='Impact:Q',
         y=alt.Y('Feature:N', sort='-x')
-    )
+    ))
     
     # Clinical Decision Support
     with st.sidebar:
