@@ -25,6 +25,10 @@ streamlit>=1.28.0
 faker>=20.0.0
 pyyaml>=6.0.0
 
+# ── Auth ──────────────────────────────────────────────────────────────────
+# Required by backend/app/core/security.py (access-token signing/verification)
+PyJWT>=2.7.0,<3.0.0
+
 # ── Testing ───────────────────────────────────────────────────────────────
 pytest>=7.4.0
 pytest-cov>=4.1.0
