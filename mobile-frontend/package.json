@@ -16,6 +16,8 @@
     "e2e:build:android": "detox build --configuration android.emu.debug",
     "e2e:test:android": "detox test --configuration android.emu.debug",
     "lint": "eslint .",
+    "build:web": "expo export --platform web",
+    "test:ci": "jest --coverage --watchAll=false --forceExit --ci",
     "format": "prettier --write \"**/*.{js,jsx,json,md}\""
   },
   "dependencies": {
