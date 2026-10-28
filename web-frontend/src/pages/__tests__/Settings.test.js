@@ -1,172 +1,222 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { BrowserRouter } from "react-router-dom";
-import * as api from "../../services/api";
+import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import api from "../../services/api";
+import { makeAuth, renderWithProviders, testUser } from "../../test-utils";
 import Settings from "../Settings";
 
 jest.mock("../../services/api");
+
+const goToTab = (name) => userEvent.click(screen.getByRole("tab", { name }));
 
 describe("Settings", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     api.checkHealth.mockResolvedValue({
       status: "healthy",
-      timestamp: new Date().toISOString(),
+      version: "1.3.0",
+      timestamp: "2025-03-15T10:00:00Z",
     });
+    api.updateProfile.mockResolvedValue(testUser);
+    api.changePassword.mockResolvedValue({});
   });
 
-  it("renders settings title", () => {
-    render(
-      <BrowserRouter>
-        <Settings />
-      </BrowserRouter>,
-    );
+  it("renders the title and the three tabs", async () => {
+    renderWithProviders(<Settings />);
 
-    expect(screen.getByText("Settings")).toBeInTheDocument();
-  });
-
-  it("displays all settings tabs", () => {
-    render(
-      <BrowserRouter>
-        <Settings />
-      </BrowserRouter>,
-    );
-
-    expect(screen.getByText("User Profile")).toBeInTheDocument();
-    expect(screen.getByText("Security")).toBeInTheDocument();
-    expect(screen.getByText("Notifications")).toBeInTheDocument();
-    expect(screen.getByText("Data Management")).toBeInTheDocument();
-    expect(screen.getByText("System")).toBeInTheDocument();
-  });
-
-  it("shows user profile fields by default", () => {
-    render(
-      <BrowserRouter>
-        <Settings />
-      </BrowserRouter>,
-    );
-
-    expect(screen.getByDisplayValue("John")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("Doe")).toBeInTheDocument();
     expect(
-      screen.getByDisplayValue("john.doe@hospital.org"),
+      screen.getByRole("heading", { name: "Settings" }),
+    ).toBeInTheDocument();
+    ["Profile", "Security", "System"].forEach((name) =>
+      expect(screen.getByRole("tab", { name })).toBeInTheDocument(),
+    );
+    await waitFor(() => expect(api.checkHealth).toHaveBeenCalled());
+  });
+
+  it("pre-fills the profile form from the signed-in user", async () => {
+    renderWithProviders(<Settings />);
+
+    expect(await screen.findByDisplayValue("Ada Lovelace")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("General Hospital")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Cardiology")).toBeInTheDocument();
+    expect(screen.getByLabelText("Email")).toBeDisabled();
+    expect(screen.getByLabelText("Email")).toHaveValue("ada@hospital.org");
+  });
+
+  it("saves profile edits and refreshes the user", async () => {
+    const { auth } = renderWithProviders(<Settings />);
+    const name = await screen.findByLabelText("Full Name");
+
+    await userEvent.clear(name);
+    await userEvent.type(name, "Ada King");
+    await userEvent.click(screen.getByRole("button", { name: "Save Profile" }));
+
+    await waitFor(() =>
+      expect(api.updateProfile).toHaveBeenCalledWith({
+        fullName: "Ada King",
+        organization: "General Hospital",
+        specialty: "Cardiology",
+      }),
+    );
+    expect(auth.refreshUser).toHaveBeenCalledTimes(1);
+    expect(
+      await screen.findByText("Profile updated successfully."),
     ).toBeInTheDocument();
   });
 
-  it("switches to security tab", () => {
-    render(
-      <BrowserRouter>
-        <Settings />
-      </BrowserRouter>,
-    );
+  it("shows the API error when saving the profile fails", async () => {
+    api.updateProfile.mockRejectedValue(new Error("Name too short"));
+    renderWithProviders(<Settings />);
+    await screen.findByLabelText("Full Name");
 
-    fireEvent.click(screen.getByText("Security"));
+    await userEvent.click(screen.getByRole("button", { name: "Save Profile" }));
 
-    expect(screen.getByText("Security Settings")).toBeInTheDocument();
-    expect(screen.getByText("Two-Factor Authentication")).toBeInTheDocument();
+    expect(await screen.findByText("Name too short")).toBeInTheDocument();
   });
 
-  it("switches to notifications tab", () => {
-    render(
-      <BrowserRouter>
-        <Settings />
-      </BrowserRouter>,
-    );
+  it("copes with a missing user", async () => {
+    renderWithProviders(<Settings />, { auth: makeAuth({ user: null }) });
 
-    fireEvent.click(screen.getByText("Notifications"));
-
-    expect(screen.getByText("Notification Preferences")).toBeInTheDocument();
-    expect(screen.getByText("High-Risk Patient Alerts")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Full Name")).toHaveValue("");
+    expect(screen.getByText(/Account created N\/A/)).toBeInTheDocument();
   });
 
-  it("switches to data management tab", () => {
-    render(
-      <BrowserRouter>
-        <Settings />
-      </BrowserRouter>,
+  it("keeps the password button disabled until required fields are filled", async () => {
+    renderWithProviders(<Settings />);
+    await goToTab("Security");
+
+    const button = screen.getByRole("button", { name: "Update Password" });
+    expect(button).toBeDisabled();
+
+    await userEvent.type(
+      screen.getByLabelText("Current Password"),
+      "old-pass1",
     );
-
-    fireEvent.click(screen.getByText("Data Management"));
-
-    expect(screen.getByText("Data Management")).toBeInTheDocument();
-    expect(screen.getByText("Data Sources")).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText(/^New Password/), "new-pass12");
+    expect(button).toBeEnabled();
   });
 
-  it("switches to system tab", () => {
-    render(
-      <BrowserRouter>
-        <Settings />
-      </BrowserRouter>,
+  it("rejects mismatching passwords without calling the API", async () => {
+    renderWithProviders(<Settings />);
+    await goToTab("Security");
+
+    await userEvent.type(
+      screen.getByLabelText("Current Password"),
+      "old-pass1",
+    );
+    await userEvent.type(screen.getByLabelText(/^New Password/), "new-pass12");
+    await userEvent.type(
+      screen.getByLabelText("Confirm New Password"),
+      "different1",
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Update Password" }),
     );
 
-    fireEvent.click(screen.getByText("System"));
-
-    expect(screen.getByText("System Settings")).toBeInTheDocument();
-    expect(screen.getByText("System Information")).toBeInTheDocument();
+    expect(
+      await screen.findByText("New passwords do not match."),
+    ).toBeInTheDocument();
+    expect(api.changePassword).not.toHaveBeenCalled();
   });
 
-  it("displays save button", () => {
-    render(
-      <BrowserRouter>
-        <Settings />
-      </BrowserRouter>,
+  it("rejects passwords shorter than 8 characters", async () => {
+    renderWithProviders(<Settings />);
+    await goToTab("Security");
+
+    await userEvent.type(
+      screen.getByLabelText("Current Password"),
+      "old-pass1",
+    );
+    await userEvent.type(screen.getByLabelText(/^New Password/), "short1");
+    await userEvent.type(
+      screen.getByLabelText("Confirm New Password"),
+      "short1",
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Update Password" }),
     );
 
-    expect(screen.getByText("Save Settings")).toBeInTheDocument();
+    expect(
+      await screen.findByText("New password must be at least 8 characters."),
+    ).toBeInTheDocument();
+    expect(api.changePassword).not.toHaveBeenCalled();
   });
 
-  it("shows success message on save", async () => {
-    render(
-      <BrowserRouter>
-        <Settings />
-      </BrowserRouter>,
+  it("changes the password and clears the form", async () => {
+    renderWithProviders(<Settings />);
+    await goToTab("Security");
+
+    await userEvent.type(
+      screen.getByLabelText("Current Password"),
+      "old-pass1",
+    );
+    await userEvent.type(screen.getByLabelText(/^New Password/), "new-pass12");
+    await userEvent.type(
+      screen.getByLabelText("Confirm New Password"),
+      "new-pass12",
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Update Password" }),
     );
 
-    fireEvent.click(screen.getByText("Save Settings"));
-
-    await waitFor(() => {
-      expect(
-        screen.getByText("Settings saved successfully"),
-      ).toBeInTheDocument();
-    });
+    await waitFor(() =>
+      expect(api.changePassword).toHaveBeenCalledWith({
+        currentPassword: "old-pass1",
+        newPassword: "new-pass12",
+      }),
+    );
+    expect(
+      await screen.findByText("Password changed successfully."),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Current Password")).toHaveValue("");
   });
 
-  it("performs health check", async () => {
-    render(
-      <BrowserRouter>
-        <Settings />
-      </BrowserRouter>,
+  it("shows the server's message when the password change is refused", async () => {
+    api.changePassword.mockRejectedValue(
+      new Error("Current password is wrong"),
+    );
+    renderWithProviders(<Settings />);
+    await goToTab("Security");
+
+    await userEvent.type(
+      screen.getByLabelText("Current Password"),
+      "bad-pass1",
+    );
+    await userEvent.type(screen.getByLabelText(/^New Password/), "new-pass12");
+    await userEvent.type(
+      screen.getByLabelText("Confirm New Password"),
+      "new-pass12",
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Update Password" }),
     );
 
-    // Switch to system tab
-    fireEvent.click(screen.getByText("System"));
-
-    const checkHealthButton = screen.getByText("Check Health");
-    fireEvent.click(checkHealthButton);
-
-    await waitFor(() => {
-      expect(api.checkHealth).toHaveBeenCalled();
-    });
-
-    await waitFor(() => {
-      expect(screen.getByText(/System is healthy/)).toBeInTheDocument();
-    });
+    expect(
+      await screen.findByText("Current password is wrong"),
+    ).toBeInTheDocument();
   });
 
-  it("handles health check errors", async () => {
-    api.checkHealth.mockRejectedValue(new Error("Health check failed"));
-    console.error = jest.fn();
+  it("shows backend health on the System tab", async () => {
+    renderWithProviders(<Settings />);
+    await goToTab("System");
 
-    render(
-      <BrowserRouter>
-        <Settings />
-      </BrowserRouter>,
-    );
+    expect(
+      await screen.findByText(/Backend is healthy \(v1\.3\.0\)/),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Ada Lovelace (clinician)")).toBeInTheDocument();
+    expect(screen.getByText("Nexora v1.3.0")).toBeInTheDocument();
+  });
 
-    fireEvent.click(screen.getByText("System"));
-    fireEvent.click(screen.getByText("Check Health"));
+  it("shows an error and can re-check health", async () => {
+    api.checkHealth.mockRejectedValueOnce(new Error("Backend down"));
+    renderWithProviders(<Settings />);
+    await goToTab("System");
 
-    await waitFor(() => {
-      expect(screen.getByText(/health check failed/i)).toBeInTheDocument();
-    });
+    expect(await screen.findByText("Backend down")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Check Health" }));
+
+    expect(await screen.findByText(/Backend is healthy/)).toBeInTheDocument();
+    expect(screen.queryByText("Backend down")).not.toBeInTheDocument();
+    expect(api.checkHealth).toHaveBeenCalledTimes(2);
   });
 });

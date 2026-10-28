@@ -1,23 +1,16 @@
+import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import React from "react";
-import { render, waitFor } from "@testing-library/react-native";
-import PatientDetailScreen from "../PatientDetailScreen";
-import apiService from "../../services/api";
 import { mockPatientDetails } from "../../__mocks__/mockData";
+import apiService from "../../services/api";
+import PatientDetailScreen from "../PatientDetailScreen";
 
-// Mock dependencies
 jest.mock("../../services/api");
 
-const mockRoute = {
-  params: {
-    patientId: "p001",
-    patientName: "John Doe",
-  },
-};
+const route = { params: { patientId: "p001", patientName: "John Doe" } };
+const navigation = { setOptions: jest.fn(), navigate: jest.fn() };
 
-const mockNavigation = {
-  setOptions: jest.fn(),
-  navigate: jest.fn(),
-};
+const renderScreen = () =>
+  render(<PatientDetailScreen route={route} navigation={navigation} />);
 
 describe("PatientDetailScreen", () => {
   beforeEach(() => {
@@ -25,120 +18,116 @@ describe("PatientDetailScreen", () => {
     apiService.getPatientDetails.mockResolvedValue(mockPatientDetails);
   });
 
-  it("renders correctly", async () => {
-    const { getByTestId } = render(
-      <PatientDetailScreen route={mockRoute} navigation={mockNavigation} />,
-    );
+  it("loads the patient named in the route", async () => {
+    const { findByTestId } = renderScreen();
 
-    await waitFor(
-      () => {
-        expect(getByTestId("patient-details")).toBeTruthy();
-      },
-      { timeout: 3000 },
-    );
-  }, 10000);
-
-  it("displays patient risk score", async () => {
-    const { getByTestId } = render(
-      <PatientDetailScreen route={mockRoute} navigation={mockNavigation} />,
-    );
-
-    await waitFor(() => {
-      const riskScore = getByTestId("risk-score");
-      expect(riskScore).toBeTruthy();
-      expect(riskScore.props.children).toContain("75%");
-    });
+    expect(await findByTestId("patient-details")).toBeTruthy();
+    expect(apiService.getPatientDetails).toHaveBeenCalledWith("p001");
+    expect(navigation.setOptions).toHaveBeenCalledWith({ title: "John Doe" });
   });
 
-  it("displays patient name", async () => {
-    const { getByTestId } = render(
-      <PatientDetailScreen route={mockRoute} navigation={mockNavigation} />,
-    );
+  it("shows the risk score, band and patient summary", async () => {
+    const { findByTestId, getByText } = renderScreen();
 
-    await waitFor(() => {
-      const patientName = getByTestId("patient-name");
-      expect(patientName).toBeTruthy();
-      expect(patientName.props.children).toBe("John Doe");
-    });
+    expect((await findByTestId("risk-score")).props.children).toBe("75%");
+    expect(getByText("High risk")).toBeTruthy();
+    expect((await findByTestId("patient-name")).props.children).toBe(
+      "John Doe · Age 65 · Male",
+    );
   });
 
-  it("displays risk chart", async () => {
-    const { getByTestId } = render(
-      <PatientDetailScreen route={mockRoute} navigation={mockNavigation} />,
-    );
+  it("lists risk factors, interventions and medications", async () => {
+    const { findByText, getByText } = renderScreen();
 
-    await waitFor(() => {
-      expect(getByTestId("risk-chart")).toBeTruthy();
-    });
+    expect(await findByText("Prior admissions")).toBeTruthy();
+    expect(getByText("30%")).toBeTruthy();
+    expect(getByText("Medication review")).toBeTruthy();
+    expect(getByText("Review regimen")).toBeTruthy();
+    expect(getByText("Metformin: 1000mg, Twice daily")).toBeTruthy();
   });
 
-  it("displays clinical history", async () => {
-    const { getByTestId } = render(
-      <PatientDetailScreen route={mockRoute} navigation={mockNavigation} />,
-    );
+  it("shows the patient timeline", async () => {
+    const { findByTestId, getByText } = renderScreen();
 
-    await waitFor(
-      () => {
-        expect(getByTestId("clinical-history-list")).toBeTruthy();
-      },
-      { timeout: 3000 },
-    );
-  }, 10000);
-
-  it("displays error message on API failure", async () => {
-    apiService.getPatientDetails.mockRejectedValue(new Error("Network error"));
-
-    const { getByTestId } = render(
-      <PatientDetailScreen route={mockRoute} navigation={mockNavigation} />,
-    );
-
-    await waitFor(() => {
-      expect(getByTestId("error-message")).toBeTruthy();
-    });
+    expect(await findByTestId("clinical-history-list")).toBeTruthy();
+    expect(getByText("Admission")).toBeTruthy();
+    expect(getByText("2024-04-18")).toBeTruthy();
   });
 
-  it("sets navigation title", async () => {
-    render(
-      <PatientDetailScreen route={mockRoute} navigation={mockNavigation} />,
-    );
-
-    await waitFor(() => {
-      expect(mockNavigation.setOptions).toHaveBeenCalledWith({
-        title: "John Doe",
-      });
+  it("shows placeholders when sections are empty", async () => {
+    apiService.getPatientDetails.mockResolvedValue({
+      ...mockPatientDetails,
+      riskFactors: [],
+      interventions: [],
+      medications: [],
+      timeline: [],
     });
+    const { findByText, getByText } = renderScreen();
+
+    expect(await findByText("No risk factor data available.")).toBeTruthy();
+    expect(getByText("No interventions recommended.")).toBeTruthy();
+    expect(getByText("No medications on record.")).toBeTruthy();
+    expect(getByText("No timeline data available.")).toBeTruthy();
   });
 
-  it("displays timeline events", async () => {
-    const { getByText } = render(
-      <PatientDetailScreen route={mockRoute} navigation={mockNavigation} />,
-    );
-
-    await waitFor(() => {
-      expect(getByText("Admission")).toBeTruthy();
-      expect(getByText("Lab Test (High Glucose)")).toBeTruthy();
+  it("copes with a patient that has no score, age or gender", async () => {
+    apiService.getPatientDetails.mockResolvedValue({
+      ...mockPatientDetails,
+      riskScore: null,
+      riskBand: null,
+      age: null,
+      gender: null,
     });
+    const { findByTestId, getByText, queryByText } = renderScreen();
+
+    expect((await findByTestId("risk-score")).props.children).toBe("N/A");
+    expect(getByText("Unknown risk")).toBeTruthy();
+    expect((await findByTestId("patient-name")).props.children).toBe(
+      "John Doe",
+    );
+    expect(queryByText(/null|NaN/)).toBeNull();
   });
 
-  it("displays SHAP feature importance", async () => {
-    const { getByText } = render(
-      <PatientDetailScreen route={mockRoute} navigation={mockNavigation} />,
+  it("shows an error with a retry when loading fails", async () => {
+    apiService.getPatientDetails.mockRejectedValueOnce(
+      new Error("Server down"),
+    );
+    const { findByTestId, getByText, findByText } = renderScreen();
+
+    expect((await findByTestId("error-message")).props.children).toBe(
+      "Server down",
     );
 
-    await waitFor(() => {
-      expect(getByText(/Risk Factor Importance/)).toBeTruthy();
-    });
+    fireEvent.press(getByText("Retry"));
+
+    expect(await findByText("Prior admissions")).toBeTruthy();
+    expect(apiService.getPatientDetails).toHaveBeenCalledTimes(2);
   });
 
-  it("displays confidence interval", async () => {
-    const { getByText } = render(
-      <PatientDetailScreen route={mockRoute} navigation={mockNavigation} />,
-    );
-
-    await waitFor(() => {
-      expect(getByText(/Confidence:/)).toBeTruthy();
-      expect(getByText(/65%/)).toBeTruthy();
-      expect(getByText(/85%/)).toBeTruthy();
+  it("recomputes the risk score and shows the new value", async () => {
+    apiService.recomputeRisk.mockResolvedValue({
+      ...mockPatientDetails,
+      riskScore: 0.9,
     });
+    const { findByText, findByTestId } = renderScreen();
+
+    fireEvent.press(await findByText("Recompute Risk Score"));
+
+    await waitFor(async () =>
+      expect((await findByTestId("risk-score")).props.children).toBe("90%"),
+    );
+    expect(apiService.recomputeRisk).toHaveBeenCalledWith("p001");
+  });
+
+  it("shows an error, keeping the record, when recompute fails", async () => {
+    apiService.recomputeRisk.mockRejectedValue(new Error("Model unavailable"));
+    const { findByText, findByTestId, getByTestId } = renderScreen();
+
+    fireEvent.press(await findByText("Recompute Risk Score"));
+
+    expect((await findByTestId("recompute-error")).props.children).toBe(
+      "Model unavailable",
+    );
+    expect(getByTestId("risk-score").props.children).toBe("75%");
   });
 });

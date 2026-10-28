@@ -9,7 +9,12 @@ module.exports = {
     "^.+\\.(js|jsx)$": [
       "babel-jest",
       {
-        presets: [["@babel/preset-react", { runtime: "automatic" }]],
+        // preset-env compiles ES modules to CommonJS for Jest. It is kept here
+        // (not in a babel config file) so Parcel's own pipeline is unaffected.
+        presets: [
+          ["@babel/preset-env", { targets: { node: "current" } }],
+          ["@babel/preset-react", { runtime: "automatic" }],
+        ],
       },
     ],
   },
@@ -19,6 +24,8 @@ module.exports = {
     "!src/**/*.test.{js,jsx}",
     "!src/index.js",
     "!src/setupTests.js",
+    "!src/test-utils.js",
+    "!src/**/__mocks__/**",
   ],
   coverageThreshold: {
     global: {

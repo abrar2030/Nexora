@@ -134,13 +134,14 @@ export const checkHealth = async () => {
 
 export const getModels = async () => {
   const { data } = await apiClient.get("/models");
-  const registry = data.models || {};
+  const registry = data?.models || {};
   return Object.entries(registry).map(([name, versions]) => {
-    const latest = versions.latest || Object.values(versions)[0] || {};
+    const latest = versions?.latest || Object.values(versions || {})[0] || {};
     return {
       name,
       displayName: name
         .split("_")
+        .filter(Boolean)
         .map((w) => w[0].toUpperCase() + w.slice(1))
         .join(" "),
       version: latest?.config?.version || "1.0.0",
@@ -188,7 +189,7 @@ export const getPatients = async ({
       page_size: pageSize,
     },
   });
-  return data.patients;
+  return data?.patients ?? [];
 };
 
 export const getPatientDetail = async (patientId) => {

@@ -4,6 +4,29 @@
 // learn more: https://github.com/testing-library/jest-dom
 import "@testing-library/jest-dom";
 
+// Chart.js needs a real <canvas>, which jsdom does not provide. Replace the
+// react-chartjs-2 components with light stand-ins that expose their data so
+// tests can still assert on what would be plotted.
+jest.mock("react-chartjs-2", () => {
+  const React = require("react");
+  const makeChart = (kind) => {
+    const Chart = ({ data }) =>
+      React.createElement("div", {
+        "data-testid": `${kind}-chart`,
+        "data-labels": JSON.stringify(data?.labels ?? []),
+        role: "img",
+        "aria-label": `${kind} chart`,
+      });
+    Chart.displayName = `Mock${kind}Chart`;
+    return Chart;
+  };
+  return {
+    Line: makeChart("line"),
+    Bar: makeChart("bar"),
+    Doughnut: makeChart("doughnut"),
+  };
+});
+
 // Mock window.matchMedia
 Object.defineProperty(window, "matchMedia", {
   writable: true,

@@ -46,27 +46,34 @@ export const mockPatients = [
   },
 ];
 
+// Shape returned by GET /patients/{id} (see code/backend/app/schemas/patient.py).
 export const mockPatientDetails = {
   id: "p001",
   name: "John Doe",
   age: 65,
-  mrn: "MRN001",
-  risk: 0.75,
-  riskLevel: "high",
-  status: "active",
-  predictions: {
-    risk: 0.75,
-    top_features: ["age > 60", "previous_admissions > 2", "diabetes diagnosis"],
-    cohort_size: 120,
-    shap_features: ["Age", "Prev Adm", "Diabetes", "HTN", "HF"],
-    shap_values: [0.3, 0.25, 0.2, 0.15, 0.1],
-  },
-  explanations: { method: "SHAP", values: [0.3, 0.25, 0.2, 0.15, 0.1] },
-  uncertainty: { confidence_interval: [0.65, 0.85] },
+  dob: "1959-03-02",
+  gender: "Male",
+  primaryDiagnosis: "Type 2 Diabetes",
+  riskScore: 0.75,
+  riskBand: "high",
+  labResults: [{ date: "2024-04-11", glucose: 190, hemoglobin: 12.8 }],
+  diagnoses: [{ name: "Type 2 Diabetes", code: "E11.9", date: "2019-01-01" }],
+  riskFactors: [
+    { name: "Age", impact: 0.3 },
+    { name: "Prior admissions", impact: 0.2 },
+  ],
+  interventions: [
+    {
+      name: "Medication review",
+      description: "Review regimen",
+      priority: "High",
+    },
+  ],
+  medications: [
+    { name: "Metformin", dosage: "1000mg", frequency: "Twice daily" },
+  ],
   timeline: [
-    { event: "Admission", date: "2024-04-10" },
-    { event: "Lab Test (High Glucose)", date: "2024-04-11" },
-    { event: "Diagnosis: HF", date: "2024-04-12" },
-    { event: "Discharge", date: "2024-04-18" },
+    { title: "Admission", date: "2024-04-10", description: "Admitted" },
+    { title: "Discharge", date: "2024-04-18", description: "Discharged" },
   ],
 };

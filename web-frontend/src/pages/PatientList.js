@@ -50,6 +50,11 @@ const getRiskColor = (risk) => {
   return "success";
 };
 
+const hasScore = (risk) => typeof risk === "number" && !Number.isNaN(risk);
+
+const formatRisk = (risk) =>
+  hasScore(risk) ? `${(risk * 100).toFixed(0)}%` : null;
+
 const getRiskLabel = (risk) => {
   if (risk >= 0.75) return "High";
   if (risk >= 0.4) return "Medium";
@@ -158,7 +163,9 @@ const PatientList = () => {
       setAddOpen(false);
       setSnackbar({
         open: true,
-        message: `${created.name} was added with a computed risk score of ${(created.riskScore * 100).toFixed(0)}%.`,
+        message: hasScore(created.riskScore)
+          ? `${created.name} was added with a computed risk score of ${formatRisk(created.riskScore)}.`
+          : `${created.name} was added.`,
       });
       fetchPatients();
     } catch (err) {
@@ -176,15 +183,20 @@ const PatientList = () => {
         p.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (p.diagnosis || "").toLowerCase().includes(searchTerm.toLowerCase());
 
+      // Patients without a computed score never match a risk-band filter.
       const matchesRisk =
         riskFilter === "all" ||
-        (riskFilter === "high" && p.riskScore >= 0.75) ||
-        (riskFilter === "medium" && p.riskScore >= 0.4 && p.riskScore < 0.75) ||
-        (riskFilter === "low" && p.riskScore < 0.4);
+        (hasScore(p.riskScore) &&
+          ((riskFilter === "high" && p.riskScore >= 0.75) ||
+            (riskFilter === "medium" &&
+              p.riskScore >= 0.4 &&
+              p.riskScore < 0.75) ||
+            (riskFilter === "low" && p.riskScore < 0.4)));
 
+      // gender is optional in the API, so it can be null.
       const matchesGender =
         genderFilter === "all" ||
-        p.gender.toLowerCase() === genderFilter.toLowerCase();
+        (p.gender || "").toLowerCase() === genderFilter.toLowerCase();
 
       return matchesSearch && matchesRisk && matchesGender;
     });
@@ -192,6 +204,10 @@ const PatientList = () => {
     result.sort((a, b) => {
       let valA = a[orderBy];
       let valB = b[orderBy];
+      // Missing values (null/undefined) always sort last.
+      if (valA == null && valB == null) return 0;
+      if (valA == null) return 1;
+      if (valB == null) return -1;
       if (typeof valA === "string") valA = valA.toLowerCase();
       if (typeof valB === "string") valB = valB.toLowerCase();
       if (valA < valB) return order === "asc" ? -1 : 1;
@@ -455,11 +471,19 @@ const PatientList = () => {
                                 gap: 1,
                               }}
                             >
-                              <Chip
-                                label={`${(patient.riskScore * 100).toFixed(0)}% ${getRiskLabel(patient.riskScore)}`}
-                                color={getRiskColor(patient.riskScore)}
-                                size="small"
-                              />
+                              {hasScore(patient.riskScore) ? (
+                                <Chip
+                                  label={`${formatRisk(patient.riskScore)} ${getRiskLabel(patient.riskScore)}`}
+                                  color={getRiskColor(patient.riskScore)}
+                                  size="small"
+                                />
+                              ) : (
+                                <Chip
+                                  label="Not scored"
+                                  size="small"
+                                  variant="outlined"
+                                />
+                              )}
                             </Box>
                           </TableCell>
                           <TableCell align="right">

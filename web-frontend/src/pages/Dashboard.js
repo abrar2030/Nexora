@@ -268,10 +268,11 @@ const Dashboard = () => {
               <StatCard
                 title="High Risk Patients"
                 value={dashboardData.stats.highRiskPatients.toLocaleString()}
-                subtitle={`${(
-                  (dashboardData.stats.highRiskPatients /
-                    dashboardData.stats.activePatients) *
-                  100
+                subtitle={`${(dashboardData.stats.activePatients > 0
+                  ? (dashboardData.stats.highRiskPatients /
+                      dashboardData.stats.activePatients) *
+                    100
+                  : 0
                 ).toFixed(1)}% of total patients`}
                 icon={<TrendingUpIcon />}
                 color="error"

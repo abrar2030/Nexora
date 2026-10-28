@@ -1,52 +1,61 @@
+import { render, waitFor } from "@testing-library/react-native";
 import React from "react";
-import { render } from "@testing-library/react-native";
 import App from "../../App";
+import apiService from "../services/api";
 
-// Mock the navigation container
-jest.mock("@react-navigation/native", () => {
-  const React = require("react");
-  return {
-    ...jest.requireActual("@react-navigation/native"),
-    NavigationContainer: ({ children }) => <>{children}</>,
-  };
-});
+jest.mock("../services/api");
 
-jest.mock("@react-navigation/stack", () => {
-  const React = require("react");
-  return {
-    createStackNavigator: () => ({
-      Navigator: ({ children }) => <>{children}</>,
-      Screen: () => null,
-    }),
-  };
-});
+const user = { id: "u1", full_name: "Ada Lovelace", email: "ada@x.org" };
 
-// Mock AsyncStorage
-jest.mock("@react-native-async-storage/async-storage", () => ({
-  setItem: jest.fn(() => Promise.resolve()),
-  getItem: jest.fn(() => Promise.resolve(null)),
-  multiRemove: jest.fn(() => Promise.resolve()),
-}));
-
-// Mock API service
-jest.mock("../services/api", () => ({
-  __esModule: true,
-  default: {
-    login: jest.fn(() => Promise.resolve({ success: true, token: "test" })),
-    logout: jest.fn(() => Promise.resolve()),
-    getPatients: jest.fn(() => Promise.resolve([])),
-    getPatientDetails: jest.fn(() => Promise.resolve({})),
-    getBaseURL: jest.fn(() => "http://localhost:8000"),
-  },
-}));
-
-describe("App Component", () => {
-  it("renders correctly", () => {
-    const { getByTestId } = render(<App />);
-    expect(getByTestId("app-container")).toBeTruthy();
+describe("App", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    apiService.getAuthToken.mockResolvedValue(null);
+    apiService.setUnauthorizedHandler.mockImplementation(() => {});
+    apiService.getDashboardData.mockResolvedValue({
+      stats: {
+        activePatients: 10,
+        highRiskPatients: 2,
+        avgLengthOfStay: 4.2,
+        activeModels: 3,
+      },
+      patientRiskDistribution: { highRisk: 20, mediumRisk: 30, lowRisk: 50 },
+    });
+    apiService.getPatients.mockResolvedValue([]);
+    apiService.getNotifications.mockResolvedValue({
+      notifications: [],
+      unread: 0,
+    });
+    apiService.getModels.mockResolvedValue([]);
   });
 
-  it("renders without crashing", () => {
-    expect(() => render(<App />)).not.toThrow();
+  it("shows the public homepage to signed-out users", async () => {
+    const { findByText } = render(<App />);
+
+    expect(await findByText("Clinical Prediction System")).toBeTruthy();
+    expect(apiService.getCurrentUser).not.toHaveBeenCalled();
+  });
+
+  it("restores a stored session and opens the main tabs", async () => {
+    apiService.getAuthToken.mockResolvedValue("stored-token");
+    apiService.getCurrentUser.mockResolvedValue(user);
+    const { findAllByText, queryByText } = render(<App />);
+
+    expect((await findAllByText("Dashboard")).length).toBeGreaterThan(0);
+    expect(queryByText("Clinical Prediction System")).toBeNull();
+    for (const tab of ["Patients", "Models", "Alerts", "Settings"]) {
+      expect((await findAllByText(tab)).length).toBeGreaterThan(0);
+    }
+  });
+
+  it("falls back to the homepage when the stored token is rejected", async () => {
+    apiService.getAuthToken.mockResolvedValue("stale-token");
+    apiService.getCurrentUser.mockRejectedValue(new Error("401"));
+    const { findByText } = render(<App />);
+
+    expect(await findByText("Clinical Prediction System")).toBeTruthy();
+    await waitFor(() =>
+      expect(apiService.setAuthToken).toHaveBeenCalledWith(null),
+    );
   });
 });

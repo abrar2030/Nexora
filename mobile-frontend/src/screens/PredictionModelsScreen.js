@@ -80,6 +80,9 @@ const PredictionModelsScreen = () => {
     }
   };
 
+  const riskScore =
+    result?.predictions?.risk_score ?? result?.predictions?.risk;
+
   if (loading) {
     return (
       <ScreenWrapper style={GlobalStyles.centered}>
@@ -160,12 +163,9 @@ const PredictionModelsScreen = () => {
             <View style={styles.resultBox}>
               <Text style={styles.resultLabel}>Risk Score</Text>
               <Text style={styles.resultValue}>
-                {(
-                  (result.predictions?.risk_score ??
-                    result.predictions?.risk ??
-                    0) * 100
-                ).toFixed(1)}
-                %
+                {typeof riskScore === "number"
+                  ? `${(riskScore * 100).toFixed(1)}%`
+                  : "N/A"}
               </Text>
               {!!(result.predictions?.top_features || []).length && (
                 <>

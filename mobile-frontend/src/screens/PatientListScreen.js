@@ -34,6 +34,9 @@ const FILTER_OPTIONS = {
   LOW_RISK: { label: "Low Risk (< 40%)", key: "low" },
 };
 
+// riskScore is optional in the API (null until a score has been computed).
+const hasScore = (p) => typeof p.riskScore === "number";
+
 const emptyForm = { name: "", age: "", gender: "Female", diagnosis: "" };
 
 const PatientListScreen = ({ navigation, route }) => {
@@ -92,15 +95,15 @@ const PatientListScreen = ({ navigation, route }) => {
 
     switch (filterOption) {
       case "high":
-        patients = patients.filter((p) => p.riskScore >= 0.75);
+        patients = patients.filter((p) => hasScore(p) && p.riskScore >= 0.75);
         break;
       case "medium":
         patients = patients.filter(
-          (p) => p.riskScore >= 0.4 && p.riskScore < 0.75,
+          (p) => hasScore(p) && p.riskScore >= 0.4 && p.riskScore < 0.75,
         );
         break;
       case "low":
-        patients = patients.filter((p) => p.riskScore < 0.4);
+        patients = patients.filter((p) => hasScore(p) && p.riskScore < 0.4);
         break;
       default:
         break;
@@ -113,12 +116,21 @@ const PatientListScreen = ({ navigation, route }) => {
       case "name_desc":
         patients.sort((a, b) => b.name.localeCompare(a.name));
         break;
+      // Unscored patients always sort last, in either direction.
       case "risk_asc":
-        patients.sort((a, b) => a.riskScore - b.riskScore);
+        patients.sort(
+          (a, b) =>
+            (hasScore(a) ? 0 : 1) - (hasScore(b) ? 0 : 1) ||
+            a.riskScore - b.riskScore,
+        );
         break;
       case "risk_desc":
       default:
-        patients.sort((a, b) => b.riskScore - a.riskScore);
+        patients.sort(
+          (a, b) =>
+            (hasScore(a) ? 0 : 1) - (hasScore(b) ? 0 : 1) ||
+            b.riskScore - a.riskScore,
+        );
         break;
     }
 
@@ -316,6 +328,9 @@ const PatientListScreen = ({ navigation, route }) => {
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => setAddModalVisible(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Add patient"
+          testID="add-patient-button"
         >
           <MaterialCommunityIcons
             name="plus"

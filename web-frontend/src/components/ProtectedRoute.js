@@ -36,9 +36,19 @@ export const ProtectedRoute = ({ children }) => {
 // Wrap login/signup so an already-authenticated user is sent to the dashboard.
 export const PublicOnlyRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) return <FullScreenLoader label="Loading…" />;
-  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+  if (isAuthenticated) {
+    // Send the user back to the page that bounced them to /login, if any.
+    // Without this, signing in always landed on /dashboard because this guard
+    // re-rendered before Login's own navigate() ran.
+    const from = location.state?.from;
+    const target = from?.pathname
+      ? `${from.pathname}${from.search || ""}${from.hash || ""}`
+      : "/dashboard";
+    return <Navigate to={target} replace />;
+  }
   return children;
 };
 

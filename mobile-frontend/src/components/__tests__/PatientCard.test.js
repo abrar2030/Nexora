@@ -142,4 +142,17 @@ describe("PatientCard", () => {
 
     expect(getByText("N/A")).toBeTruthy();
   });
+
+  it("displays N/A when the API returns a null risk score", () => {
+    const { getByText, queryByText } = render(
+      <PatientCard
+        patient={{ ...mockPatient, risk: null }}
+        onPress={mockOnPress}
+        onLongPress={mockOnLongPress}
+      />,
+    );
+
+    expect(getByText("N/A")).toBeTruthy();
+    expect(queryByText("0%")).toBeNull();
+  });
 });

@@ -58,6 +58,7 @@ const PatientDetailScreen = ({ route, navigation }) => {
 
   const handleRecompute = async () => {
     setRecomputing(true);
+    setError(null);
     try {
       const updated = await api.recomputeRisk(patientId);
       setPatient(updated);
@@ -118,7 +119,9 @@ const PatientDetailScreen = ({ route, navigation }) => {
             style={[styles.riskText, { color: riskColor }]}
             testID="risk-score"
           >
-            {`${Math.round((patient.riskScore || 0) * 100)}%`}
+            {typeof patient.riskScore === "number"
+              ? `${Math.round(patient.riskScore * 100)}%`
+              : "N/A"}
           </Text>
           <View
             style={[styles.riskPill, { backgroundColor: `${riskColor}1A` }]}
@@ -129,7 +132,20 @@ const PatientDetailScreen = ({ route, navigation }) => {
           </View>
           {patient.name && (
             <Text style={styles.patientNameText} testID="patient-name">
-              {patient.name} · Age {patient.age} · {patient.gender}
+              {[
+                patient.name,
+                patient.age != null ? `Age ${patient.age}` : null,
+                patient.gender,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </Text>
+          )}
+          {!!error && (
+            // A failed recompute used to be swallowed once a patient was
+            // loaded, because errors were only shown when there was no data.
+            <Text style={styles.noDataText} testID="recompute-error">
+              {error}
             </Text>
           )}
           <CustomButton

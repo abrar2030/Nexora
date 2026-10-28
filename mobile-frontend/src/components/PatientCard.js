@@ -92,7 +92,7 @@ export const PatientCard = ({
                 styles.riskBadge,
                 {
                   backgroundColor:
-                    patient.risk !== undefined
+                    patient.risk != null
                       ? getRiskColor(patient.risk)
                       : Colors.textSecondary,
                 },
@@ -100,7 +100,7 @@ export const PatientCard = ({
               testID="risk-badge"
             >
               <Text style={styles.riskValue}>
-                {patient.risk !== undefined
+                {patient.risk != null
                   ? `${Math.round(patient.risk * 100)}%`
                   : "N/A"}
               </Text>

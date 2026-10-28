@@ -132,6 +132,10 @@ const PredictionModels = () => {
     }
   };
 
+  const predictionRiskScore =
+    predictionResult?.predictions?.risk_score ??
+    predictionResult?.predictions?.risk;
+
   const performanceChart = performance
     ? {
         labels: performance.labels,
@@ -416,12 +420,9 @@ const PredictionModels = () => {
                               color="primary.main"
                               sx={{ fontWeight: 700 }}
                             >
-                              {(
-                                (predictionResult.predictions?.risk_score ??
-                                  predictionResult.predictions?.risk ??
-                                  0) * 100
-                              ).toFixed(1)}
-                              %
+                              {typeof predictionRiskScore === "number"
+                                ? `${(predictionRiskScore * 100).toFixed(1)}%`
+                                : "N/A"}
                             </Typography>
                           </CardContent>
                         </Card>

@@ -9,6 +9,7 @@ module.exports = {
     "!src/**/*.test.{js,jsx}",
     "!src/**/__tests__/**",
     "!src/**/__mocks__/**",
+    "!src/test-utils.js",
   ],
   coverageThreshold: {
     global: {

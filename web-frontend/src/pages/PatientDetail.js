@@ -68,6 +68,8 @@ const getRiskColor = (risk) => {
   return "success";
 };
 
+const hasScore = (risk) => typeof risk === "number" && !Number.isNaN(risk);
+
 const PatientDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -103,7 +105,9 @@ const PatientDetail = () => {
       const updated = await api.recomputeRisk(id);
       setPatient(updated);
       setSnackbarMsg(
-        `Risk score refreshed: ${(updated.riskScore * 100).toFixed(0)}% (${updated.riskBand} risk).`,
+        hasScore(updated.riskScore)
+          ? `Risk score refreshed: ${(updated.riskScore * 100).toFixed(0)}% (${updated.riskBand} risk).`
+          : "Risk score refreshed.",
       );
       setSnackbarOpen(true);
     } catch (err) {
@@ -143,11 +147,7 @@ const PatientDetail = () => {
         <Alert
           severity="error"
           action={
-            <Button
-              color="inherit"
-              size="small"
-              onClick={() => window.location.reload()}
-            >
+            <Button color="inherit" size="small" onClick={fetchPatient}>
               Retry
             </Button>
           }
@@ -175,12 +175,20 @@ const PatientDetail = () => {
   }
 
   // Chart data, built after null-guard so always safe
+  // The API returns empty arrays for missing sections, but stay defensive.
+  const labResults = patient.labResults ?? [];
+  const diagnoses = patient.diagnoses ?? [];
+  const riskFactors = patient.riskFactors ?? [];
+  const interventions = patient.interventions ?? [];
+  const medications = patient.medications ?? [];
+  const timeline = patient.timeline ?? [];
+
   const labResultsData = {
-    labels: patient.labResults.map((l) => l.date),
+    labels: labResults.map((l) => l.date),
     datasets: [
       {
         label: "Glucose (mg/dL)",
-        data: patient.labResults.map((l) => l.glucose),
+        data: labResults.map((l) => l.glucose),
         borderColor: "#1976d2",
         backgroundColor: "rgba(25, 118, 210, 0.1)",
         tension: 0.4,
@@ -188,7 +196,7 @@ const PatientDetail = () => {
       },
       {
         label: "Hemoglobin (g/dL)",
-        data: patient.labResults.map((l) => l.hemoglobin),
+        data: labResults.map((l) => l.hemoglobin),
         borderColor: "#9c27b0",
         backgroundColor: "rgba(156, 39, 176, 0.1)",
         tension: 0.4,
@@ -198,12 +206,12 @@ const PatientDetail = () => {
   };
 
   const riskFactorsData = {
-    labels: patient.riskFactors.map((f) => f.name),
+    labels: riskFactors.map((f) => f.name),
     datasets: [
       {
         label: "Impact on Risk",
-        data: patient.riskFactors.map((f) => f.impact),
-        backgroundColor: patient.riskFactors.map((f) =>
+        data: riskFactors.map((f) => f.impact),
+        backgroundColor: riskFactors.map((f) =>
           f.impact > 0.2
             ? "rgba(244, 67, 54, 0.7)"
             : f.impact > 0.1
@@ -227,8 +235,11 @@ const PatientDetail = () => {
 
   const initials = patient.name
     .split(" ")
+    .filter(Boolean)
     .map((n) => n[0])
-    .join("");
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 
   return (
     <Box>
@@ -290,7 +301,11 @@ const PatientDetail = () => {
                   </ListItemIcon>
                   <ListItemText
                     primary="Age / DOB"
-                    secondary={`${patient.age} years (${patient.dob})`}
+                    secondary={
+                      patient.age != null
+                        ? `${patient.age} years${patient.dob ? ` (${patient.dob})` : ""}`
+                        : patient.dob || "Not recorded"
+                    }
                   />
                 </ListItem>
                 <ListItem disableGutters>
@@ -315,12 +330,21 @@ const PatientDetail = () => {
                   <ListItemText
                     primary="Risk Score"
                     secondary={
-                      <Chip
-                        label={`${(patient.riskScore * 100).toFixed(0)}% Risk`}
-                        color={getRiskColor(patient.riskScore)}
-                        size="small"
-                        sx={{ mt: 0.5 }}
-                      />
+                      hasScore(patient.riskScore) ? (
+                        <Chip
+                          label={`${(patient.riskScore * 100).toFixed(0)}% Risk`}
+                          color={getRiskColor(patient.riskScore)}
+                          size="small"
+                          sx={{ mt: 0.5 }}
+                        />
+                      ) : (
+                        <Chip
+                          label="Not scored"
+                          size="small"
+                          variant="outlined"
+                          sx={{ mt: 0.5 }}
+                        />
+                      )
                     }
                   />
                 </ListItem>
@@ -452,11 +476,8 @@ const PatientDetail = () => {
                   Diagnoses
                 </Typography>
                 <List>
-                  {patient.diagnoses.map((dx, i) => (
-                    <ListItem
-                      key={i}
-                      divider={i < patient.diagnoses.length - 1}
-                    >
+                  {diagnoses.map((dx, i) => (
+                    <ListItem key={i} divider={i < diagnoses.length - 1}>
                       <ListItemIcon>
                         <HospitalIcon color="primary" />
                       </ListItemIcon>
@@ -501,11 +522,8 @@ const PatientDetail = () => {
                   Recommended Interventions
                 </Typography>
                 <List>
-                  {patient.interventions.map((iv, i) => (
-                    <ListItem
-                      key={i}
-                      divider={i < patient.interventions.length - 1}
-                    >
+                  {interventions.map((iv, i) => (
+                    <ListItem key={i} divider={i < interventions.length - 1}>
                       <ListItemIcon>
                         <ScienceIcon color="primary" />
                       </ListItemIcon>
@@ -540,11 +558,8 @@ const PatientDetail = () => {
                   Current Medications
                 </Typography>
                 <List>
-                  {patient.medications.map((med, i) => (
-                    <ListItem
-                      key={i}
-                      divider={i < patient.medications.length - 1}
-                    >
+                  {medications.map((med, i) => (
+                    <ListItem key={i} divider={i < medications.length - 1}>
                       <ListItemIcon>
                         <MedicationIcon color="primary" />
                       </ListItemIcon>
@@ -585,17 +600,15 @@ const PatientDetail = () => {
                   Clinical Timeline
                 </Typography>
                 <List>
-                  {patient.timeline.map((event, i) => (
+                  {timeline.map((event, i) => (
                     <ListItem
                       key={i}
-                      divider={i < patient.timeline.length - 1}
+                      divider={i < timeline.length - 1}
                       sx={{
                         borderLeft:
-                          i === patient.timeline.length - 1
-                            ? "3px solid"
-                            : "3px solid",
+                          i === timeline.length - 1 ? "3px solid" : "3px solid",
                         borderColor:
-                          i === patient.timeline.length - 1
+                          i === timeline.length - 1
                             ? "primary.main"
                             : "divider",
                         pl: 2,
@@ -605,9 +618,7 @@ const PatientDetail = () => {
                       <ListItemIcon>
                         <TimelineIcon
                           color={
-                            i === patient.timeline.length - 1
-                              ? "primary"
-                              : "action"
+                            i === timeline.length - 1 ? "primary" : "action"
                           }
                         />
                       </ListItemIcon>
@@ -626,7 +637,7 @@ const PatientDetail = () => {
                             >
                               {event.title}
                             </Typography>
-                            {i === patient.timeline.length - 1 && (
+                            {i === timeline.length - 1 && (
                               <Chip
                                 label="Latest"
                                 size="small"

@@ -8,14 +8,50 @@ require("@testing-library/react-native/extend-expect");
 import mockAsyncStorage from "@react-native-async-storage/async-storage/jest/async-storage-mock";
 jest.mock("@react-native-async-storage/async-storage", () => mockAsyncStorage);
 
-// Mock expo-constants
-jest.mock("expo-constants", () => ({
-  expoConfig: {
-    extra: {
-      apiBaseUrl: "http://localhost:8000",
+// Mock expo-constants.
+// The real module's named exports (ExecutionEnvironment, etc.) are read at
+// import time by expo-asset / expo-font, which @expo/vector-icons pulls in, so
+// the mock has to provide them or any screen importing an icon crashes.
+jest.mock("expo-constants", () => {
+  const Constants = {
+    expoConfig: { extra: { apiBaseUrl: "http://localhost:8000" } },
+    executionEnvironment: "bare",
+  };
+  return {
+    __esModule: true,
+    default: Constants,
+    ExecutionEnvironment: {
+      Bare: "bare",
+      Standalone: "standalone",
+      StoreClient: "storeClient",
     },
-  },
-}));
+    ...Constants,
+  };
+});
+
+// @expo/vector-icons loads fonts asynchronously and updates state after a test
+// has finished, which causes act() warnings. Render each icon synchronously as
+// text so tests can still see which icon was requested.
+jest.mock("@expo/vector-icons", () => {
+  const React = require("react");
+  const { Text } = require("react-native");
+  const makeIcon = (family) => {
+    const Icon = ({ name, size, color, ...rest }) =>
+      React.createElement(Text, rest, `${family}:${name}`);
+    Icon.displayName = `${family}IconStub`;
+    return Icon;
+  };
+  return new Proxy(
+    { __esModule: true },
+    {
+      get: (target, prop) => {
+        if (prop in target) return target[prop];
+        if (typeof prop !== "string" || prop === "then") return undefined;
+        return makeIcon(prop);
+      },
+    },
+  );
+});
 
 // Mock react-native-chart-kit
 jest.mock("react-native-chart-kit", () => ({
@@ -100,3 +136,10 @@ global.console = {
   warn: jest.fn(),
   error: jest.fn(),
 };
+
+// SafeAreaProvider renders nothing until the native side reports insets, which
+// never happens under Jest. The library ships an official mock for this.
+jest.mock(
+  "react-native-safe-area-context",
+  () => require("react-native-safe-area-context/jest/mock").default,
+);
