@@ -9,7 +9,6 @@ sys.path.insert(
 import numpy as np
 import pandas as pd
 import pytest
-
 from ml_core.pipeline.data_validation import DataValidator
 
 

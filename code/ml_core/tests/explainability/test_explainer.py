@@ -2,7 +2,6 @@
 
 import numpy as np
 import pytest
-
 from ml_core.explainability.explainer import ExplanationResult, ModelExplainer
 
 # ---------------------------------------------------------------------------

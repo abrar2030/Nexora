@@ -10,8 +10,6 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict
 
-from fastapi import APIRouter, Depends, HTTPException, status
-
 from backend.app.core.security import create_access_token, get_current_user
 from backend.app.models.user import UserStore
 from backend.app.schemas.auth import (
@@ -22,6 +20,7 @@ from backend.app.schemas.auth import (
     UpdateProfileRequest,
     UserOut,
 )
+from fastapi import APIRouter, Depends, HTTPException, status
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["Authentication"])

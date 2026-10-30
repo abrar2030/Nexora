@@ -15,10 +15,9 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
 import jwt
+from backend.app.core.config import settings
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-
-from backend.app.core.config import settings
 
 _HASH_NAME = "sha256"
 _PBKDF2_ITERATIONS = 260_000

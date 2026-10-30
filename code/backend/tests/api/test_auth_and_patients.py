@@ -12,10 +12,9 @@ import pytest
 fastapi = pytest.importorskip("fastapi", reason="fastapi not installed")
 httpx = pytest.importorskip("httpx", reason="httpx not installed")
 
-from fastapi.testclient import TestClient
-
 from backend.app.core import config as config_module
 from backend.serving.rest_api import app
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture(autouse=True)

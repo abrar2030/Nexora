@@ -13,7 +13,6 @@ if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
 import pytest
-
 from ml_core.pipeline.data.synthetic_clinical_data import ClinicalDataGenerator
 
 
@@ -54,9 +53,8 @@ def mock_audit_logger():
 
 
 try:
-    from fastapi.testclient import TestClient
-
     from backend.serving.rest_api import app
+    from fastapi.testclient import TestClient
 
     @pytest.fixture
     def test_client():

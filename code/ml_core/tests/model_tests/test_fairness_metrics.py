@@ -13,7 +13,6 @@ matplotlib.use("Agg")
 import numpy as np
 import pandas as pd
 import pytest
-
 from ml_core.models.fairness_metrics import FairnessEvaluator
 
 

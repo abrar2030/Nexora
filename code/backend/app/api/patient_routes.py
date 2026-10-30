@@ -12,8 +12,6 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-
 from backend.app.core.config import settings
 from backend.app.core.security import get_current_user
 from backend.app.models.patient import PatientStore
@@ -23,6 +21,7 @@ from backend.app.schemas.patient import (
     PatientListResponse,
     PatientUpdateRequest,
 )
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from ml_core.compliance.phi_audit_logger import PHIAuditLogger
 
 logger = logging.getLogger(__name__)

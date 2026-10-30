@@ -12,7 +12,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pytest
-
 from ml_core.models.fairness_metrics import FairnessEvaluator
 from ml_core.utils.healthcare_metrics import HealthcareMetrics
 

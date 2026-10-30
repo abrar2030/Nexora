@@ -6,7 +6,6 @@ sys.path.insert(
 )
 
 import pytest
-
 from ml_core.models.model_registry import ModelRegistry
 from ml_core.models.transformer_model import TransformerModel
 

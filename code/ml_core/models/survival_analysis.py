@@ -5,7 +5,6 @@ from typing import Any, Dict, Optional
 
 import numpy as np
 import pandas as pd
-
 from ml_core.models.base_model import BaseModel
 
 logger = logging.getLogger(__name__)

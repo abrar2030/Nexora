@@ -229,30 +229,19 @@ class ModelArtifactStore:
         if target_stage == ModelStage.PRODUCTION:
             current_prod = self.get_production_version(model_name)
             if current_prod and current_prod != version:
-                self._update_stage(model_name, current_prod, ModelStage.ARCHIVED)
+                self._update_stage(
+                    model_name,
+                    current_prod,
+                    ModelStage.ARCHIVED,
+                    promoted_by=promoted_by,
+                    notes=f"Auto-archived on promotion of v{version} to production",
+                )
                 logger.info(
                     f"Auto-archived {model_name} v{current_prod} "
                     "before promoting new production version."
                 )
 
-        self._update_stage(model_name, version, target_stage)
-
-        # Record promotion event in metadata
-        meta["stage"] = target_stage
-        meta["promotion_history"].append(
-            {
-                "from_stage": current_stage,
-                "to_stage": target_stage,
-                "promoted_by": promoted_by,
-                "promoted_at": datetime.now(timezone.utc).isoformat(),
-                "notes": notes,
-            }
-        )
-        meta_path = os.path.join(
-            self._artifact_dir(model_name, version), "metadata.json"
-        )
-        with open(meta_path, "w") as f:
-            json.dump(meta, f, indent=2)
+        self._update_stage(model_name, version, target_stage, promoted_by, notes)
 
         logger.info(
             f"Promoted {model_name} v{version}: {current_stage} → {target_stage}"
@@ -286,7 +275,33 @@ class ModelArtifactStore:
     def _artifact_dir(self, model_name: str, version: str) -> str:
         return os.path.join(self.base_path, model_name, version)
 
-    def _update_stage(self, model_name: str, version: str, stage: ModelStage) -> None:
+    def _update_stage(
+        self,
+        model_name: str,
+        version: str,
+        stage: ModelStage,
+        promoted_by: str = "system",
+        notes: str = "",
+    ) -> None:
+        """Persist a stage change to both the registry index and metadata.json."""
+        meta = self.get_metadata(model_name, version)
+        previous_stage = meta.get("stage", ModelStage.DEVELOPMENT)
+        meta["stage"] = stage
+        meta.setdefault("promotion_history", []).append(
+            {
+                "from_stage": previous_stage,
+                "to_stage": stage,
+                "promoted_by": promoted_by,
+                "promoted_at": datetime.now(timezone.utc).isoformat(),
+                "notes": notes,
+            }
+        )
+        meta_path = os.path.join(
+            self._artifact_dir(model_name, version), "metadata.json"
+        )
+        with open(meta_path, "w") as f:
+            json.dump(meta, f, indent=2)
+
         self._registry[model_name][version]["stage"] = stage
         self._save_registry()
 

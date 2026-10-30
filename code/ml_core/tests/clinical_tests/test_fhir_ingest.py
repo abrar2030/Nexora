@@ -8,7 +8,6 @@ sys.path.insert(
 
 import pandas as pd
 import pytest
-
 from ml_core.pipeline.data_validation import DataValidator
 
 # ---------------------------------------------------------------------------
