@@ -3,6 +3,10 @@
 
 // Setup jest-expo preset which handles most React Native mocks
 require("@testing-library/react-native/extend-expect");
+const { configure } = require("@testing-library/react-native");
+
+// The first render in a cold Jest worker can take several seconds on CI.
+configure({ asyncUtilTimeout: 15000 });
 
 // Mock @react-native-async-storage/async-storage
 import mockAsyncStorage from "@react-native-async-storage/async-storage/jest/async-storage-mock";
